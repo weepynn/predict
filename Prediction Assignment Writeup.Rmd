@@ -1,0 +1,72 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Lim Wee Pynn"
+date: "7 June 2018"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Objective
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. The "classe" variable is the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). Hence, based on all the variables in the data set, you wish to predict the outcomes of the unilateral Dumbbell Biceps Curl. 
+
+This report is summarized into 4 parts. 1) Data import, cleaning and partitioning. 2) Data Prediction and Modelling, 3) Validation of model 4) Testing the model with the "pml-testing" data set.
+
+## 1) Data import, cleaning and partitioning
+
+Firstly, load up the data sets. I will remove all the irrelevant variables for our prediction model. They are the first 7 variables of the data sets. Then, I will remove all the columns with 'NA' values from both the test and training sets. 
+
+```{r}
+x <- read.csv("pml-training.csv", na.strings = c("NA", "", "#DIV0!"))
+y <- read.csv("pml-testing.csv", na.strings = c("NA", "", "#DIV0!"))
+dim(x)
+dim(y)
+head(colnames(x), 7)
+head(colnames(y), 7)
+train <- x[,8:dim(x)[2]]
+test <- y[,8:dim(y)[2]]
+train <- train[, colSums(is.na(train)) == 0]
+test <- test[, colSums(is.na(test))==0]
+dim(train)
+dim(test)
+```
+Now, we are reduced to 53 variables including the "classe" variable in both sets. Next, I will split the training set into two sets, 70% for training, and 30% for testing. 
+```{r}
+library(caret)
+set.seed(12345)
+inTrain <- createDataPartition(train$classe, p = 0.7, list = F)
+training <- train[inTrain,]
+testing <- train[-inTrain,]
+dim(training)
+dim(testing)
+
+```
+## 2) Data Prediction and Modelling
+
+The algorithm used here is Random Forest. 
+
+```{r}
+library(e1071)
+setting <- trainControl(method ="cv", 5)
+RandForest <- train(classe ~., data = training, method = 'rf', trControl = setting)
+RandForest
+```
+Next, test the model on the out-of-sample partitioned test set. 
+
+## 3) Validation of the model
+```{r}
+prediction <- predict(RandForest, testing)
+confusionMatrix(testing$classe, prediction)
+```
+Model has an accuracy of about 98%. So, we shall use this model to predict the "pml-testing" data set.
+
+## 4) Testing the model with the "pml-testing" data set
+
+```{r}
+predict20 <- predict(RandForest, test)
+predict20
+```
